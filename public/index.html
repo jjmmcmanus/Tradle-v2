@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,14 +8,40 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#111;color:#eee;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:1.5rem 1rem}
-  h1{font-size:22px;font-weight:600;letter-spacing:3px;color:#fff;margin-bottom:4px}
-  #subtitle{font-size:12px;color:#888;margin-bottom:12px}
-  #legend{display:flex;gap:14px;font-size:11px;color:#888;margin-bottom:14px}
+  h1{font-size:22px;font-weight:600;letter-spacing:3px;color:#fff;margin-bottom:4px;text-align:center}
+  #subtitle{font-size:12px;color:#888;margin-bottom:12px;text-align:center}
+
+  /* Layout — game in centre, leaderboard panel on the right */
+  #layout{display:flex;gap:24px;align-items:flex-start;width:100%;max-width:900px;justify-content:center}
+  #game-col{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}
+  #leaderboard-col{flex:0 0 240px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;display:none}
+  #leaderboard-col h3{font-size:13px;font-weight:600;color:#eee;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+  #leaderboard-col .lb-date{font-size:10px;color:#555;font-weight:400;margin-bottom:12px}
+  .lb-entry{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #222;font-size:12px}
+  .lb-entry:last-child{border-bottom:none}
+  .lb-pos{color:#888;width:20px;font-weight:600}
+  .lb-name{flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+  .lb-score{font-weight:600;color:#aaa;font-size:11px}
+  .lb-score.win{color:#7CCB57}
+  .lb-score.lose{color:#888}
+  .lb-empty{font-size:11px;color:#555;text-align:center;padding:10px 0;font-style:italic}
+  .lb-stats{font-size:10px;color:#666;margin-top:10px;padding-top:10px;border-top:1px solid #222;text-align:center}
+
+  #legend{display:flex;gap:14px;font-size:11px;color:#888;margin-bottom:14px;justify-content:center}
   .leg{width:14px;height:14px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:middle}
   .leg-g{background:#3B6D11}.leg-y{background:#BA7517}.leg-x{background:#5F5E5A}
   #board{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
   .row{display:flex;gap:6px}
-  .tile{width:54px;height:54px;border:1.5px solid #444;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#eee;text-transform:uppercase;transition:background 0.2s,border-color 0.2s}
+
+  /* Tile flip animation */
+  .tile{width:54px;height:54px;border:1.5px solid #444;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#eee;text-transform:uppercase;perspective:600px;transform-style:preserve-3d}
+  .tile.flip{animation:flip 0.55s ease forwards}
+  @keyframes flip{
+    0%{transform:rotateX(0deg);background:transparent;border-color:#aaa}
+    49%{transform:rotateX(90deg);background:transparent;border-color:#aaa;color:#eee}
+    50%{transform:rotateX(90deg)}
+    100%{transform:rotateX(0deg)}
+  }
   .tile.g{background:#3B6D11;border-color:#3B6D11;color:#C0DD97}
   .tile.y{background:#BA7517;border-color:#BA7517;color:#FAC775}
   .tile.x{background:#3a3a3a;border-color:#3a3a3a;color:#888}
@@ -23,6 +50,18 @@
   @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
   .tile.shake{animation:shake 0.4s ease}
   @keyframes shake{0%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}100%{transform:translateX(0)}}
+
+  /* Win bounce */
+  .tile.bounce{animation:bounce 0.7s ease}
+  @keyframes bounce{
+    0%,100%{transform:translateY(0)}
+    20%{transform:translateY(-18px)}
+    40%{transform:translateY(0)}
+    50%{transform:translateY(-9px)}
+    60%{transform:translateY(0)}
+    80%{transform:translateY(-3px)}
+  }
+
   #msg{height:26px;font-size:13px;font-weight:600;color:#fff;text-align:center;margin-bottom:6px}
   #day-label{font-size:11px;color:#555;margin-bottom:10px;text-align:center}
   #keyboard{display:flex;flex-direction:column;gap:7px;align-items:center;margin-bottom:14px}
@@ -37,7 +76,6 @@
   #user-bar{font-size:12px;color:#666;margin-bottom:8px;text-align:center}
   #user-bar span{color:#aaa;font-weight:500}
 
-  /* Login screen */
   #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:60vh;text-align:center}
   #login-screen h2{font-size:18px;font-weight:500;color:#eee}
   #login-screen p{font-size:13px;color:#888;max-width:280px;line-height:1.6}
@@ -45,8 +83,7 @@
   #discord-login-btn:hover{background:#4752c4}
   #discord-login-btn svg{width:24px;height:24px}
 
-  /* Already played screen */
-  #played-screen{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:2rem 0}
+  #played-screen{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:1rem 0}
   #played-screen h2{font-size:18px;font-weight:500}
   #played-screen p{font-size:13px;color:#888;line-height:1.6}
   .result-grid{display:flex;flex-direction:column;gap:4px;margin:8px 0}
@@ -60,13 +97,17 @@
   #next-word-timer{font-size:12px;color:#555;margin-top:4px}
 
   #game-area{display:none;flex-direction:column;align-items:center;width:100%}
+
+  @media (max-width: 720px) {
+    #layout{flex-direction:column}
+    #leaderboard-col{flex:none;width:100%;max-width:340px}
+  }
 </style>
 </head>
 <body>
 <h1>TRADLE</h1>
 <div id="subtitle">Trading &amp; TnB Wordle</div>
 
-<!-- Login Screen -->
 <div id="login-screen">
   <h2>Sign in to play</h2>
   <p>Log in with Discord once — we'll remember you automatically every day after that.</p>
@@ -74,49 +115,50 @@
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
     Login with Discord
   </button>
-  <p style="font-size:11px;color:#555">Only your username and avatar are accessed. No DMs or server permissions.</p>
+  <p style="font-size:11px;color:#555">Only your username and avatar are accessed.</p>
 </div>
 
-<!-- Game Area -->
-<div id="game-area">
-  <div id="user-bar">Playing as <span id="username-display"></span></div>
-  <div id="legend">
-    <span><span class="leg leg-g"></span>right spot</span>
-    <span><span class="leg leg-y"></span>wrong spot</span>
-    <span><span class="leg leg-x"></span>not in word</span>
+<div id="layout" style="display:none">
+  <div id="game-col">
+    <div id="game-area">
+      <div id="user-bar">Playing as <span id="username-display"></span></div>
+      <div id="legend">
+        <span><span class="leg leg-g"></span>right spot</span>
+        <span><span class="leg leg-y"></span>wrong spot</span>
+        <span><span class="leg leg-x"></span>not in word</span>
+      </div>
+      <div id="day-label"></div>
+      <div id="msg"></div>
+      <div id="board"></div>
+      <div id="keyboard"></div>
+      <div id="word-count"></div>
+    </div>
+
+    <div id="played-screen" style="display:none">
+      <h2 id="played-title"></h2>
+      <p id="played-subtitle"></p>
+      <div id="result-grid-display" class="result-grid"></div>
+      <button id="copy-result-btn" onclick="copyResult()">Copy result</button>
+      <div id="next-word-timer"></div>
+    </div>
   </div>
-  <div id="day-label"></div>
-  <div id="msg"></div>
-  <div id="board"></div>
-  <div id="keyboard"></div>
-  <div id="word-count"></div>
-</div>
 
-<!-- Already Played Screen -->
-<div id="played-screen" style="display:none">
-  <h2 id="played-title"></h2>
-  <p id="played-subtitle"></p>
-  <div id="result-grid-display" class="result-grid"></div>
-  <button id="copy-result-btn" onclick="copyResult()">Copy result</button>
-  <div id="next-word-timer"></div>
+  <div id="leaderboard-col">
+    <h3>Today's Leaderboard <span style="font-size:10px;color:#666;font-weight:400">live</span></h3>
+    <div class="lb-date" id="lb-date"></div>
+    <div id="lb-list"></div>
+  </div>
 </div>
 
 <script>
 const WORDS = [
-  "ALPHA","SIGMA","CALLS","SWAPS","RATIO",
-  "BLOCK","FILLS","CROSS","QUOTE","PRINT",
-  "HEDGE","SHORT","RALLY","GRIND","SCALP",
-  "PIVOT","RANGE","SWING","SPIKE","BREAK",
-  "SWEEP","FADED","WICKS","DUMPS","PUMPS",
-  "YIELD","BASIS","BONDS","NOTES","MACRO",
-  "MICRO","LIMIT","PAPER","OFFER","PRICE",
-  "BUYER","MOVER","INDEX","ENTER","TRADE",
-  "EDGED","PLACE","RISKY","LONGS","BROKE",
-  "DOUGH","MONEY","WEDGE","GOYIM","GOYUM",
-  "LARPS","FAKED","GOONS","ZESTY","ROOKS",
-  "SAUCE","BANKS","FUNDS","PAIRS","ENTRY",
-  "CHART","STOCK","SHARE","HIGHS","TREND",
-  "JOHNV","SLOPS","BASED","CLOUT","TINGS","MOGGS"
+  "ALPHA","SIGMA","CALLS","SWAPS","RATIO","BLOCK","FILLS","CROSS","QUOTE","PRINT",
+  "HEDGE","SHORT","RALLY","GRIND","SCALP","PIVOT","RANGE","SWING","SPIKE","BREAK",
+  "SWEEP","FADED","WICKS","DUMPS","PUMPS","YIELD","BASIS","BONDS","NOTES","MACRO",
+  "MICRO","LIMIT","PAPER","OFFER","PRICE","BUYER","MOVER","INDEX","ENTER","TRADE",
+  "EDGED","PLACE","RISKY","LONGS","BROKE","DOUGH","MONEY","WEDGE","GOYIM","GOYUM",
+  "LARPS","FAKED","GOONS","ZESTY","ROOKS","SAUCE","BANKS","FUNDS","PAIRS","ENTRY",
+  "CHART","STOCK","SHARE","HIGHS","TREND","JOHNV","SLOPS","BASED","CLOUT","TINGS","MOGGS"
 ];
 
 const VALID = new Set([
@@ -137,122 +179,125 @@ const VALID = new Set([
   "CLICK","CLIFF","CLIMB","CLING","CLOCK","CLONE","CLOSE","CLOUD","COACH","COAST",
   "COLOR","COMIC","CORAL","COUNT","COURT","COVER","CRACK","CRAFT","CRANE","CRASH",
   "CRAZY","CREAM","CREEK","CRISP","CROWD","CROWN","CRUEL","CRUSH","CURVE","CYCLE",
-  "DAIRY","DANCE","DARED","DATES","DEALT","DEATH","DEBUT","DECAY","DEFER","DELAY",
-  "DEMON","DENSE","DEPOT","DEPTH","DERBY","DIRTY","DISCO","DODGE","DOUBT","DRAFT",
-  "DRAIN","DRAMA","DRANK","DRAWN","DREAD","DREAM","DRESS","DRIED","DRIFT","DRINK",
-  "DRIVE","DRONE","DROVE","DROWN","DUSTY","DWARF","EAGER","EAGLE","EARLY","EARTH",
-  "EIGHT","ELECT","EMAIL","EMPTY","ENDED","ENEMY","ENJOY","EQUAL","ERROR","ESSAY",
-  "EVADE","EVENT","EVERY","EXACT","EXERT","EXILE","EXIST","EXTRA","FABLE","FAINT",
-  "FAIRY","FAITH","FALSE","FANCY","FATAL","FAULT","FEAST","FENCE","FEVER","FEWER",
-  "FIELD","FIGHT","FINAL","FIRST","FIXED","FLAME","FLANK","FLARE","FLASK","FLEET",
-  "FLESH","FLIES","FLOCK","FLOOD","FLOOR","FLOUR","FLUID","FLUSH","FOCAL","FOGGY",
-  "FORCE","FORGE","FORTH","FORUM","FOUND","FRAME","FRANK","FRAUD","FRESH","FRONT",
-  "FROST","FROZE","FULLY","FUNGI","FUNKY","FUNNY","FURRY","FUZZY","GAINS","GHOST",
-  "GIANT","GIVEN","GLAND","GLARE","GLASS","GLIDE","GLOBE","GLOOM","GLORY","GLOVE",
-  "GOING","GRACE","GRADE","GRAIN","GRAND","GRANT","GRAPE","GRASP","GRASS","GRAVE",
-  "GREAT","GREET","GRIEF","GRILL","GRIME","GROAN","GROVE","GROWN","GUARD","GUIDE",
-  "GUILD","GUILT","GUISE","GUSTO","HABIT","HAPPY","HARSH","HEART","HEAVY","HENCE",
-  "HINGE","HOLLY","HONOR","HORSE","HOTEL","HOURS","HOUSE","HUMAN","HUMOR","IDEAL",
-  "IMAGE","IMPLY","INFER","INNER","INPUT","INTER","INTRO","ISSUE","IVORY","JAPAN",
-  "JEWEL","JOINT","JOKER","JUDGE","JUICE","JUICY","JUMBO","JUMPY","KARMA","KNEEL",
-  "KNIFE","KNOCK","KNOWN","LABEL","LANCE","LARGE","LASER","LATER","LAUGH","LAYER",
-  "LEARN","LEASE","LEGAL","LEMON","LEVEL","LIGHT","LINER","LIVER","LOCAL","LODGE",
-  "LOGIC","LOOSE","LOVER","LOWER","LUCKY","LUNAR","LYING","MAGIC","MAJOR","MAKER",
-  "MANOR","MAPLE","MARCH","MATCH","MAYOR","MEDIA","MERIT","METAL","MIGHT","MINOR",
-  "MINUS","MODEL","MONTH","MORAL","MOTOR","MOUNT","MOUSE","MOUTH","MOVED","MOVIE",
-  "MUDDY","MUSIC","NAIVE","NAMED","NAVAL","NERVE","NEVER","NEWLY","NIGHT","NOBLE",
-  "NOISE","NORTH","NOVEL","NURSE","NYMPH","OCEAN","OLIVE","ORDER","OTHER","OUTER",
-  "OWNER","OXIDE","OZONE","PAINT","PANIC","PARTY","PASTA","PATCH","PAUSE","PEACE",
-  "PEACH","PEARL","PENNY","PHASE","PHONE","PIANO","PIECE","PILOT","PINCH","PIXEL",
-  "PLAIN","PLANE","PLANT","PLATE","PLAZA","PLEAD","PLUCK","PLUMB","PLUME","PLUMP",
-  "POINT","POKER","POLAR","POLKA","POPPY","PORCH","POSED","POUND","POWER","PRESS",
-  "PRIDE","PRIME","PRIOR","PRIZE","PROBE","PRONE","PROOF","PROSE","PROVE","PROWL",
-  "PROXY","PRUNE","PURSE","QUAKE","QUEEN","QUEST","QUEUE","QUICK","QUIET","QUOTA",
-  "RABBI","RADAR","RADIO","RAINY","RAPID","RAVEN","REACH","REACT","READY","REALM",
-  "REBEL","REFER","REIGN","RELAX","REPLY","RIDER","RIDGE","RIGHT","RIGID","RIVAL",
-  "RIVER","ROBIN","ROBOT","ROCKY","ROUGE","ROUGH","ROUND","ROUTE","ROYAL","RULER",
-  "RURAL","SAFER","SAINT","SALAD","SAVVY","SCALE","SCENE","SCOPE","SCORE","SCOUT",
-  "SENSE","SERVE","SEVEN","SHADE","SHAKE","SHALL","SHAME","SHAPE","SHARK","SHARP",
-  "SHEER","SHELF","SHELL","SHIFT","SHINE","SHIRT","SHOCK","SHORE","SHOWN","SIGHT",
-  "SILLY","SINCE","SIXTH","SIXTY","SIZED","SKILL","SKULL","SLATE","SLAVE","SLEEP",
-  "SLICE","SLIDE","SLIME","SLOPE","SLOTH","SMART","SMELL","SMILE","SMOKE","SNAKE",
-  "SOLAR","SOLID","SOLVE","SONIC","SORRY","SOUTH","SPACE","SPARE","SPARK","SPEAK",
-  "SPEAR","SPELL","SPEND","SPICE","SPINE","SPITE","SPLIT","SPOKE","SPOON","SPORT",
-  "SPOUT","SPRAY","SQUAD","SQUAT","STACK","STAFF","STAGE","STAIN","STAIR","STAKE",
-  "STALE","STALL","STAMP","STAND","STARE","START","STATE","STAYS","STEAM","STEEL",
-  "STEEP","STEER","STERN","STICK","STIFF","STILL","STONE","STOOD","STORE","STORM",
-  "STORY","STOUT","STOVE","STRAP","STRAW","STRAY","STRIP","STUCK","STUDY","STUFF",
-  "STYLE","SUGAR","SUITE","SUNNY","SUPER","SURGE","SWAMP","SWEAR","SWEAT","SWEET",
-  "SWELL","SWIFT","SWORD","TABLE","TAKEN","TASTE","TEACH","TENSE","THANK","THICK",
-  "THING","THINK","THIRD","THORN","THOSE","THREE","THREW","THROW","TIGER","TIGHT",
-  "TIMER","TIRED","TITLE","TODAY","TOKEN","TOUCH","TOUGH","TOWEL","TOWER","TOXIC",
-  "TRACE","TRACK","TRAIL","TRAIN","TREAT","TRIAL","TRIBE","TRIED","TROOP","TRUCK",
-  "TRULY","TRUMP","TRUNK","TRUST","TRUTH","TUMOR","TWICE","TWIST","TYPED","ULTRA",
-  "UNCLE","UNDER","UNION","UNITY","UNTIL","UPPER","UPSET","URBAN","USAGE","USUAL",
-  "UTTER","VALID","VALUE","VALVE","VIDEO","VIGIL","VIGOR","VIRAL","VISIT","VISOR",
-  "VISTA","VITAL","VIVID","VOCAL","VODKA","VOICE","VOTER","VOWED","WAIST","WASTE",
-  "WATCH","WATER","WEARY","WEAVE","WEIGH","WEIRD","WHALE","WHEAT","WHEEL","WHERE",
-  "WHICH","WHILE","WHITE","WHOLE","WIDER","WITTY","WOMAN","WOMEN","WORLD","WORRY",
-  "WORSE","WORST","WORTH","WOULD","WOUND","WRITE","WROTE","YACHT","YOUNG","YOURS",
-  "YOUTH","ZEBRA","ZONAL"
+  "DAIRY","DANCE","DARED","DEALT","DEATH","DEBUT","DECAY","DEFER","DELAY","DEMON",
+  "DENSE","DEPTH","DERBY","DIRTY","DISCO","DODGE","DOUBT","DRAFT","DRAIN","DRAMA",
+  "DRANK","DRAWN","DREAD","DREAM","DRESS","DRIED","DRIFT","DRINK","DRIVE","DRONE",
+  "DROVE","DROWN","DUSTY","DWARF","EAGER","EAGLE","EARLY","EARTH","EIGHT","ELECT",
+  "EMAIL","EMPTY","ENDED","ENEMY","ENJOY","EQUAL","ERROR","ESSAY","EVADE","EVENT",
+  "EVERY","EXACT","EXERT","EXILE","EXIST","EXTRA","FABLE","FAINT","FAIRY","FAITH",
+  "FALSE","FANCY","FATAL","FAULT","FEAST","FENCE","FEVER","FEWER","FIELD","FIGHT",
+  "FINAL","FIRST","FIXED","FLAME","FLANK","FLARE","FLASK","FLEET","FLESH","FLOCK",
+  "FLOOD","FLOOR","FLOUR","FLUID","FLUSH","FOCAL","FORCE","FORGE","FORTH","FORUM",
+  "FOUND","FRAME","FRANK","FRAUD","FRESH","FRONT","FROST","FROZE","FULLY","FUNGI",
+  "FUNKY","FUNNY","FURRY","FUZZY","GAINS","GHOST","GIANT","GIVEN","GLAND","GLARE",
+  "GLASS","GLIDE","GLOBE","GLOOM","GLORY","GLOVE","GOING","GRACE","GRADE","GRAIN",
+  "GRAND","GRANT","GRAPE","GRASP","GRASS","GRAVE","GREAT","GREET","GRIEF","GRILL",
+  "GRIME","GROAN","GROVE","GROWN","GUARD","GUIDE","GUILD","GUILT","GUISE","GUSTO",
+  "HABIT","HAPPY","HARSH","HEART","HEAVY","HENCE","HINGE","HOLLY","HONOR","HORSE",
+  "HOTEL","HOURS","HOUSE","HUMAN","HUMOR","IDEAL","IMAGE","IMPLY","INFER","INNER",
+  "INPUT","INTER","INTRO","ISSUE","IVORY","JAPAN","JEWEL","JOINT","JOKER","JUDGE",
+  "JUICE","JUICY","JUMBO","JUMPY","KARMA","KNEEL","KNIFE","KNOCK","KNOWN","LABEL",
+  "LANCE","LARGE","LASER","LATER","LAUGH","LAYER","LEARN","LEASE","LEGAL","LEMON",
+  "LEVEL","LIGHT","LINER","LIVER","LOCAL","LODGE","LOGIC","LOOSE","LOVER","LOWER",
+  "LUCKY","LUNAR","LYING","MAGIC","MAJOR","MAKER","MANOR","MAPLE","MARCH","MATCH",
+  "MAYOR","MEDIA","MERIT","METAL","MIGHT","MINOR","MINUS","MODEL","MONTH","MORAL",
+  "MOTOR","MOUNT","MOUSE","MOUTH","MOVED","MOVIE","MUDDY","MUSIC","NAIVE","NAMED",
+  "NAVAL","NERVE","NEVER","NEWLY","NIGHT","NOBLE","NOISE","NORTH","NOVEL","NURSE",
+  "NYMPH","OCEAN","OLIVE","ORDER","OTHER","OUTER","OWNER","OXIDE","OZONE","PAINT",
+  "PANIC","PARTY","PASTA","PATCH","PAUSE","PEACE","PEACH","PEARL","PENNY","PHASE",
+  "PHONE","PIANO","PIECE","PILOT","PINCH","PIXEL","PLAIN","PLANE","PLANT","PLATE",
+  "PLAZA","PLEAD","PLUCK","PLUMB","PLUME","PLUMP","POINT","POKER","POLAR","POLKA",
+  "POPPY","PORCH","POSED","POUND","POWER","PRESS","PRIDE","PRIME","PRIOR","PRIZE",
+  "PROBE","PRONE","PROOF","PROSE","PROVE","PROWL","PROXY","PRUNE","PURSE","QUAKE",
+  "QUEEN","QUEST","QUEUE","QUICK","QUIET","QUOTA","RABBI","RADAR","RADIO","RAINY",
+  "RAPID","RAVEN","REACH","REACT","READY","REALM","REBEL","REFER","REIGN","RELAX",
+  "REPLY","RIDER","RIDGE","RIGHT","RIGID","RIVAL","RIVER","ROBIN","ROBOT","ROCKY",
+  "ROUGE","ROUGH","ROUND","ROUTE","ROYAL","RULER","RURAL","SAFER","SAINT","SALAD",
+  "SAVVY","SCALE","SCENE","SCOPE","SCORE","SCOUT","SENSE","SERVE","SEVEN","SHADE",
+  "SHAKE","SHALL","SHAME","SHAPE","SHARK","SHARP","SHEER","SHELF","SHELL","SHIFT",
+  "SHINE","SHIRT","SHOCK","SHORE","SHOWN","SIGHT","SILLY","SINCE","SIXTH","SIXTY",
+  "SIZED","SKILL","SKULL","SLATE","SLAVE","SLEEP","SLICE","SLIDE","SLIME","SLOPE",
+  "SLOTH","SMART","SMELL","SMILE","SMOKE","SNAKE","SOLAR","SOLID","SOLVE","SONIC",
+  "SORRY","SOUTH","SPACE","SPARE","SPARK","SPEAK","SPEAR","SPELL","SPEND","SPICE",
+  "SPINE","SPITE","SPLIT","SPOKE","SPOON","SPORT","SPOUT","SPRAY","SQUAD","SQUAT",
+  "STACK","STAFF","STAGE","STAIN","STAIR","STAKE","STALE","STALL","STAMP","STAND",
+  "STARE","START","STATE","STAYS","STEAM","STEEL","STEEP","STEER","STERN","STICK",
+  "STIFF","STILL","STONE","STOOD","STORE","STORM","STORY","STOUT","STOVE","STRAP",
+  "STRAW","STRAY","STRIP","STUCK","STUDY","STUFF","STYLE","SUGAR","SUITE","SUNNY",
+  "SUPER","SURGE","SWAMP","SWEAR","SWEAT","SWEET","SWELL","SWIFT","SWORD","TABLE",
+  "TAKEN","TASTE","TEACH","TENSE","THANK","THICK","THING","THINK","THIRD","THORN",
+  "THOSE","THREE","THREW","THROW","TIGER","TIGHT","TIMER","TIRED","TITLE","TODAY",
+  "TOKEN","TOUCH","TOUGH","TOWEL","TOWER","TOXIC","TRACE","TRACK","TRAIL","TRAIN",
+  "TREAT","TRIAL","TRIBE","TRIED","TROOP","TRUCK","TRULY","TRUMP","TRUNK","TRUST",
+  "TRUTH","TUMOR","TWICE","TWIST","TYPED","ULTRA","UNCLE","UNDER","UNION","UNITY",
+  "UNTIL","UPPER","UPSET","URBAN","USAGE","USUAL","UTTER","VALID","VALUE","VALVE",
+  "VIDEO","VIGIL","VIGOR","VIRAL","VISIT","VISOR","VISTA","VITAL","VIVID","VOCAL",
+  "VODKA","VOICE","VOTER","VOWED","WAIST","WASTE","WATCH","WATER","WEARY","WEAVE",
+  "WEIGH","WEIRD","WHALE","WHEAT","WHEEL","WHERE","WHICH","WHILE","WHITE","WHOLE",
+  "WIDER","WITTY","WOMAN","WOMEN","WORLD","WORRY","WORSE","WORST","WORTH","WOULD",
+  "WOUND","WRITE","WROTE","YACHT","YOUNG","YOURS","YOUTH","ZEBRA","ZONAL"
 ]);
 
 const ROWS=6,COLS=5;
 let secret,currentRow,currentCol,grid,gameOver,keyState;
 let currentUser=null;
 let guessHistory=[];
+let lbInterval=null;
 
-function getUKDateString(){
-  return new Date().toLocaleDateString('en-GB',{timeZone:'Europe/London'});
-}
-function hashStr(str){
-  let h=0;for(let i=0;i<str.length;i++){h=(Math.imul(31,h)+str.charCodeAt(i))|0;}return Math.abs(h);
-}
-function getDailyWord(){
-  return WORDS[hashStr(getUKDateString())%WORDS.length];
-}
+function getUKDateString(){return new Date().toLocaleDateString('en-GB',{timeZone:'Europe/London'});}
+function hashStr(str){let h=0;for(let i=0;i<str.length;i++){h=(Math.imul(31,h)+str.charCodeAt(i))|0;}return Math.abs(h);}
+function getDailyWord(){return WORDS[hashStr(getUKDateString())%WORDS.length];}
 
-// Discord OAuth
 function discordLogin(){
   const clientId = window.DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID';
   const redirect = encodeURIComponent(window.location.origin+'/auth/callback');
   window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=identify`;
 }
 
-// Check session
 async function checkSession(){
-  try{
-    const res = await fetch('/auth/me');
-    if(res.ok){
-      const user = await res.json();
-      return user;
-    }
-  }catch(e){}
+  try { const res = await fetch('/auth/me'); if(res.ok) return await res.json(); } catch(e){}
   return null;
 }
 
-// Check if already played today
 async function checkAlreadyPlayed(userId){
-  try{
-    const res = await fetch(`/api/score?userId=${userId}&date=${getUKDateString()}`);
-    if(res.ok){
-      const data = await res.json();
-      return data;
-    }
-  }catch(e){}
+  try { const res = await fetch(`/api/score?userId=${userId}&date=${getUKDateString()}`); if(res.ok) return await res.json(); } catch(e){}
   return null;
 }
 
-// Submit score
 async function submitScore(userId, username, tries, won, guesses){
-  try{
-    await fetch('/api/score',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({userId,username,tries,won,guesses,date:getUKDateString()})
-    });
-  }catch(e){console.error('Score submit failed',e);}
+  try { await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId,username,tries,won,guesses,date:getUKDateString()})}); } catch(e){}
 }
+
+async function fetchLeaderboard(){
+  try {
+    const res = await fetch('/api/leaderboard');
+    if(!res.ok) return;
+    const data = await res.json();
+    renderLeaderboard(data.scores||[]);
+  } catch(e){}
+}
+
+function renderLeaderboard(scores){
+  const list = document.getElementById('lb-list');
+  document.getElementById('lb-date').textContent = getUKDateString();
+  if(!scores.length){
+    list.innerHTML = '<div class="lb-empty">No one has played yet.</div>';
+    return;
+  }
+  let html = '';
+  const medals = ['🥇','🥈','🥉'];
+  scores.forEach((s,i) => {
+    const pos = medals[i] || `${i+1}.`;
+    const score = s.won ? `${s.tries}/6` : 'X/6';
+    const cls = s.won ? 'win' : 'lose';
+    html += `<div class="lb-entry"><span class="lb-pos">${pos}</span><span class="lb-name">${escapeHtml(s.username)}</span><span class="lb-score ${cls}">${score}</span></div>`;
+  });
+  const solvers = scores.filter(s=>s.won).length;
+  html += `<div class="lb-stats">${solvers}/${scores.length} solved today</div>`;
+  list.innerHTML = html;
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 async function startApp(){
   const user = await checkSession();
@@ -262,43 +307,47 @@ async function startApp(){
   }
   currentUser = user;
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('layout').style.display='flex';
+  document.getElementById('leaderboard-col').style.display='block';
 
-  // Check if already played
+  // Start polling leaderboard every 15s
+  fetchLeaderboard();
+  lbInterval = setInterval(fetchLeaderboard, 15000);
+
   const existing = await checkAlreadyPlayed(user.id);
   if(existing && existing.submitted){
     showAlreadyPlayed(user, existing);
     return;
   }
-
-  // Start game
   document.getElementById('username-display').textContent = user.username;
   document.getElementById('game-area').style.display='flex';
   initGame();
 }
 
 function showAlreadyPlayed(user, data){
+  document.getElementById('game-area').style.display='none';
   document.getElementById('played-screen').style.display='flex';
   const won = data.won;
   const tries = data.tries;
   document.getElementById('played-title').textContent = won ? `You got it in ${tries}!` : "Better luck tomorrow!";
   document.getElementById('played-subtitle').textContent = won
     ? `Nice one ${user.username} — come back at midnight for a new word.`
-    : `The word was ${data.word||''}. Come back at midnight UK time.`;
-
-  // Render result grid
+    : `Come back at midnight UK time for a new word.`;
   const grid = document.getElementById('result-grid-display');
   grid.innerHTML='';
   if(data.guesses){
     data.guesses.forEach(row=>{
       const rowEl=document.createElement('div');rowEl.className='result-row';
-      row.forEach(s=>{
-        const t=document.createElement('div');t.className='result-tile '+s;rowEl.appendChild(t);
-      });
+      row.forEach(s=>{const t=document.createElement('div');t.className='result-tile '+s;rowEl.appendChild(t);});
+      grid.appendChild(rowEl);
+    });
+  } else if(guessHistory.length){
+    guessHistory.forEach(row=>{
+      const rowEl=document.createElement('div');rowEl.className='result-row';
+      row.forEach(s=>{const t=document.createElement('div');t.className='result-tile '+s;rowEl.appendChild(t);});
       grid.appendChild(rowEl);
     });
   }
-
-  // Countdown to midnight UK
   updateCountdown();
   setInterval(updateCountdown,1000);
 }
@@ -312,23 +361,20 @@ function updateCountdown(){
   const h=Math.floor(diff/3600000);
   const m=Math.floor((diff%3600000)/60000);
   const s=Math.floor((diff%60000)/1000);
-  document.getElementById('next-word-timer').textContent=
-    `Next word in ${h}h ${m}m ${s}s`;
+  const el = document.getElementById('next-word-timer');
+  if(el) el.textContent=`Next word in ${h}h ${m}m ${s}s`;
 }
 
 function copyResult(){
-  const secret2 = getDailyWord();
   const dateStr = getUKDateString();
-  let txt = `Tradle — Trading & TnB Wordle\n${dateStr}\n\n`;
-  guessHistory.forEach(row=>{
-    txt += row.map(s=>s==='g'?'🟩':s==='y'?'🟨':'⬛').join('')+'\n';
-  });
+  let txt = `Tradle — ${dateStr}\n\n`;
+  const guesses = guessHistory.length ? guessHistory : [];
+  guesses.forEach(row=>{txt += row.map(s=>s==='g'?'🟩':s==='y'?'🟨':'⬛').join('')+'\n';});
   navigator.clipboard&&navigator.clipboard.writeText(txt);
   const btn=document.getElementById('copy-result-btn');
   btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy result',1500);
 }
 
-// Game logic
 function initGame(){
   secret=getDailyWord();
   currentRow=0;currentCol=0;gameOver=false;guessHistory=[];
@@ -366,20 +412,33 @@ function renderKeyboard(){
   });
 }
 
-function updateTile(r,c,letter,st){
+function setLetter(r,c,letter){
   const t=document.getElementById(`t-${r}-${c}`);
   t.textContent=letter;
-  t.className='tile'+(st?' '+st:'')+(letter&&!st?' filled':'');
-  if(letter&&!st){t.classList.add('pop');setTimeout(()=>t.classList.remove('pop'),150);}
+  t.className='tile'+(letter?' filled':'');
+  if(letter){t.classList.add('pop');setTimeout(()=>t.classList.remove('pop'),150);}
+}
+
+// Animated tile reveal with flip
+function revealTile(r,c,letter,state,delay){
+  const t=document.getElementById(`t-${r}-${c}`);
+  setTimeout(()=>{
+    t.classList.add('flip');
+    setTimeout(()=>{
+      t.classList.remove('flip','filled');
+      t.classList.add(state);
+      t.textContent=letter;
+    },275);
+  },delay);
 }
 
 function setMsg(m){document.getElementById('msg').textContent=m;}
 
 function handleKey(k){
   if(gameOver)return;
-  if(k==='←'||k==='Backspace'){if(currentCol>0){currentCol--;grid[currentRow][currentCol]='';updateTile(currentRow,currentCol,'',null);}}
+  if(k==='←'||k==='Backspace'){if(currentCol>0){currentCol--;grid[currentRow][currentCol]='';setLetter(currentRow,currentCol,'');}}
   else if(k==='↵'||k==='Enter'){submit();}
-  else if(/^[A-Z]$/.test(k)&&currentCol<COLS){grid[currentRow][currentCol]=k;updateTile(currentRow,currentCol,k,null);currentCol++;}
+  else if(/^[A-Z]$/.test(k)&&currentCol<COLS){grid[currentRow][currentCol]=k;setLetter(currentRow,currentCol,k);currentCol++;}
 }
 
 function submit(){
@@ -388,22 +447,38 @@ function submit(){
   if(!VALID.has(guess)){shakeRow(currentRow);setMsg('Not a valid word!');setTimeout(()=>setMsg(''),1500);return;}
   const result=score(guess,secret);
   guessHistory.push(result);
-  result.forEach((s,c)=>updateTile(currentRow,c,grid[currentRow][c],s));
-  result.forEach((s,c)=>{const k=grid[currentRow][c];const order={g:3,y:2,x:1};if(!keyState[k]||order[s]>order[keyState[k]])keyState[k]=s;});
-  updateKeyColors();
-  const tries=currentRow+1;
-  if(guess===secret){
-    gameOver=true;
-    submitScore(currentUser.id,currentUser.username,tries,true,guessHistory);
-    const msgs=['Legendary!','To the moon!','Easy money!','Nice trade!','Profitable!','That works!'];
-    setMsg(msgs[Math.min(currentRow,msgs.length-1)]);
-    setTimeout(()=>showAlreadyPlayed(currentUser,{won:true,tries,guesses:guessHistory}),1800);
-  } else if(currentRow===ROWS-1){
-    gameOver=true;
-    submitScore(currentUser.id,currentUser.username,7,false,guessHistory);
-    setMsg('Answer: '+secret);
-    setTimeout(()=>showAlreadyPlayed(currentUser,{won:false,tries:7,word:secret,guesses:guessHistory}),1800);
-  }
+
+  // Animate tile flip with stagger
+  const r = currentRow;
+  result.forEach((s,c)=>revealTile(r,c,grid[r][c],s,c*250));
+
+  // Wait for all tiles to flip before checking win/loss
+  setTimeout(()=>{
+    result.forEach((s,c)=>{const k=grid[r][c];const order={g:3,y:2,x:1};if(!keyState[k]||order[s]>order[keyState[k]])keyState[k]=s;});
+    updateKeyColors();
+    const tries=r+1;
+    if(guess===secret){
+      gameOver=true;
+      submitScore(currentUser.id,currentUser.username,tries,true,guessHistory);
+      // Win bounce
+      result.forEach((_,c)=>{
+        setTimeout(()=>{
+          const t=document.getElementById(`t-${r}-${c}`);
+          t.classList.add('bounce');
+          setTimeout(()=>t.classList.remove('bounce'),700);
+        },c*100);
+      });
+      const msgs=['Legendary!','To the moon!','Easy money!','Nice trade!','Profitable!','That works!'];
+      setMsg(msgs[Math.min(r,msgs.length-1)]);
+      setTimeout(()=>{showAlreadyPlayed(currentUser,{won:true,tries,guesses:guessHistory});fetchLeaderboard();},2200);
+    } else if(r===ROWS-1){
+      gameOver=true;
+      submitScore(currentUser.id,currentUser.username,7,false,guessHistory);
+      setMsg('Better luck tomorrow!');
+      setTimeout(()=>{showAlreadyPlayed(currentUser,{won:false,tries:7,guesses:guessHistory});fetchLeaderboard();},2000);
+    }
+  }, 5*250 + 300);
+
   currentRow++;currentCol=0;
 }
 
