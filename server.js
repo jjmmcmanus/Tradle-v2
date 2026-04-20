@@ -6,9 +6,7 @@ const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 const { createClient } = require('@supabase/supabase-js');
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
-const cron = require('node-cron');
 
-// ─── Express setup ───────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 app.use(session({
@@ -18,13 +16,8 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 * 365 }
 }));
 
-// ─── Supabase ────────────────────────────────────────────────────
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_KEY || ''
-);
+const supabase = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_KEY || '');
 
-// ─── Word logic ──────────────────────────────────────────────────
 const WORDS = [
   "ALPHA","SIGMA","CALLS","SWAPS","RATIO","BLOCK","FILLS","CROSS","QUOTE","PRINT",
   "HEDGE","SHORT","RALLY","GRIND","SCALP","PIVOT","RANGE","SWING","SPIKE","BREAK",
@@ -35,122 +28,105 @@ const WORDS = [
   "CHART","STOCK","SHARE","HIGHS","TREND","JOHNV","SLOPS","BASED","CLOUT","TINGS","MOGGS"
 ];
 
-function hashStr(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
-  return Math.abs(h);
-}
+function hashStr(str) { let h=0; for(let i=0;i<str.length;i++){h=(Math.imul(31,h)+str.charCodeAt(i))|0;} return Math.abs(h); }
+function getDailyWord(dateStr) { if(!dateStr) dateStr=new Date().toLocaleDateString('en-GB',{timeZone:'Europe/London'}); return WORDS[hashStr(dateStr)%WORDS.length]; }
+function getUKDate() { return new Date().toLocaleDateString('en-GB',{timeZone:'Europe/London'}); }
 
-function getDailyWord(dateStr) {
-  if (!dateStr) dateStr = new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London' });
-  return WORDS[hashStr(dateStr) % WORDS.length];
-}
-
-// ─── Routes ──────────────────────────────────────────────────────
-
-// Root — serve game with client ID injected
 app.get('/', (req, res) => {
   try {
-    const indexPath = path.join(__dirname, 'public', 'index.html');
-    let html = fs.readFileSync(indexPath, 'utf8');
-    const clientId = process.env.DISCORD_CLIENT_ID || '';
-    html = html.replace("window.DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID'", `'${clientId}'`);
-    res.setHeader('Content-Type', 'text/html');
+    let html = fs.readFileSync(path.join(__dirname,'public','index.html'),'utf8');
+    html = html.replace("window.DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID'", `'${process.env.DISCORD_CLIENT_ID||''}'`);
+    res.setHeader('Content-Type','text/html');
     res.send(html);
-  } catch (e) {
-    console.error('Failed to serve index.html:', e.message);
-    res.status(500).send('Game failed to load: ' + e.message);
-  }
+  } catch(e) { res.status(500).send('Error: '+e.message); }
 });
 
-// Discord OAuth callback
 app.get('/auth/callback', async (req, res) => {
   const code = req.query.code;
-  if (!code) return res.redirect('/');
+  if(!code) return res.redirect('/');
   try {
-    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID || '',
-        client_secret: process.env.DISCORD_CLIENT_SECRET || '',
-        grant_type: 'authorization_code',
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({
+        client_id:process.env.DISCORD_CLIENT_ID||'',
+        client_secret:process.env.DISCORD_CLIENT_SECRET||'',
+        grant_type:'authorization_code',
         code,
-        redirect_uri: process.env.REDIRECT_URI || '',
+        redirect_uri:process.env.REDIRECT_URI||'',
       })
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) {
-      console.error('No access token:', tokenData);
-      return res.redirect('/');
-    }
-    const userRes = await fetch('https://discord.com/api/users/@me', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` }
-    });
+    if(!tokenData.access_token) return res.redirect('/');
+    const userRes = await fetch('https://discord.com/api/users/@me',{headers:{Authorization:`Bearer ${tokenData.access_token}`}});
     const user = await userRes.json();
-    req.session.user = { id: user.id, username: user.username, avatar: user.avatar };
+    req.session.user = {id:user.id,username:user.username,avatar:user.avatar};
     res.redirect('/');
-  } catch (e) {
-    console.error('OAuth error:', e.message);
-    res.redirect('/');
-  }
+  } catch(e) { res.redirect('/'); }
 });
 
-// Get current session user
 app.get('/auth/me', (req, res) => {
-  if (req.session.user) return res.json(req.session.user);
-  res.status(401).json({ error: 'Not logged in' });
+  if(req.session.user) return res.json(req.session.user);
+  res.status(401).json({error:'Not logged in'});
 });
 
-// Logout
-app.get('/auth/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
-});
+app.get('/auth/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
 
-// Get score for today
 app.get('/api/score', async (req, res) => {
-  const { userId, date } = req.query;
-  if (!userId || !date) return res.status(400).json({ error: 'Missing params' });
+  const {userId, date} = req.query;
+  if(!userId||!date) return res.status(400).json({error:'Missing params'});
   try {
-    const { data, error } = await supabase
-      .from('scores')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', date)
-      .single();
-    if (error || !data) return res.json({ submitted: false });
-    res.json({ submitted: true, tries: data.tries, won: data.won, word: data.word, guesses: data.guesses });
-  } catch (e) {
-    res.json({ submitted: false });
-  }
+    const {data} = await supabase.from('scores').select('*').eq('user_id',userId).eq('date',date).single();
+    if(!data) return res.json({submitted:false});
+    res.json({submitted:true,tries:data.tries,won:data.won,word:data.word,guesses:data.guesses});
+  } catch(e) { res.json({submitted:false}); }
 });
 
-// Submit score
 app.post('/api/score', async (req, res) => {
-  const { userId, username, tries, won, guesses, date } = req.body;
-  if (!userId || !username) return res.status(400).json({ error: 'Missing params' });
+  const {userId, username, tries, won, guesses, date} = req.body;
+  if(!userId||!username) return res.status(400).json({error:'Missing params'});
   try {
+    const {data: existing} = await supabase.from('scores').select('user_id').eq('user_id',userId).eq('date',date).single();
+    const isFirstSubmission = !existing;
+
     await supabase.from('scores').upsert({
-      user_id: userId,
-      username,
-      tries,
-      won,
-      guesses,
-      date,
-      word: getDailyWord(date),
-    }, { onConflict: 'user_id,date', ignoreDuplicates: true });
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+      user_id:userId, username, tries, won, guesses, date, word:getDailyWord(date),
+    },{onConflict:'user_id,date',ignoreDuplicates:true});
+
+    if(isFirstSubmission && process.env.RESULTS_CHANNEL_ID) {
+      postResultToDiscord(username, tries, won, guesses, date).catch(e=>console.error('Post result error:',e.message));
+    }
+    res.json({ok:true});
+  } catch(e) { res.status(500).json({error:e.message}); }
 });
 
-// Static files last
-app.use(express.static(path.join(__dirname, 'public')));
+async function postResultToDiscord(username, tries, won, guesses, date) {
+  const channelId = process.env.RESULTS_CHANNEL_ID;
+  if(!channelId || !discordClient.isReady()) return;
+  try {
+    const channel = await discordClient.channels.fetch(channelId);
+    const score = won ? `${tries}/6` : 'X/6';
+    const emojiGrid = (guesses||[]).map(row => row.map(s => s==='g'?'🟩':s==='y'?'🟨':'⬛').join('')).join('\n');
+    const msg = `**${username}** — Tradle ${date} — ${score}\n${emojiGrid}`;
+    await channel.send(msg);
+  } catch(e) { console.error('Discord post error:',e.message); }
+}
 
-// ─── Discord Bot ─────────────────────────────────────────────────
-const discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
+app.get('/api/leaderboard', async (req, res) => {
+  const date = req.query.date || getUKDate();
+  try {
+    const {data} = await supabase.from('scores')
+      .select('username,tries,won,guesses')
+      .eq('date',date)
+      .order('tries',{ascending:true})
+      .order('created_at',{ascending:true});
+    res.json({date, scores: data || []});
+  } catch(e) { res.json({date, scores:[]}); }
+});
+
+app.use(express.static(path.join(__dirname,'public')));
+
+const discordClient = new Client({intents:[GatewayIntentBits.Guilds]});
 
 const commands = [
   new SlashCommandBuilder().setName('tradle').setDescription('Play Tradle — Trading & TnB Wordle').toJSON(),
@@ -159,82 +135,108 @@ const commands = [
 ];
 
 async function registerCommands() {
-  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN || '');
+  const rest = new REST({version:'10'}).setToken(process.env.DISCORD_TOKEN||'');
   try {
-    await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID || ''), { body: commands });
+    await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID||''),{body:commands});
     console.log('Slash commands registered');
-  } catch (e) { console.error('Command register error:', e.message); }
+  } catch(e) { console.error('Command register error:',e.message); }
 }
 
-async function getLeaderboardEmbed(dateStr) {
-  if (!dateStr) dateStr = new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London' });
-  const word = getDailyWord(dateStr);
+async function getLeaderboardEmbed(dateStr, showWord = false) {
+  if(!dateStr) dateStr = getUKDate();
   try {
-    const { data } = await supabase
-      .from('scores').select('username,tries,won').eq('date', dateStr).order('tries', { ascending: true });
-    if (!data || data.length === 0) {
-      return { title: `Tradle Leaderboard — ${dateStr}`, description: 'No scores yet today!', color: 0x3B6D11 };
+    const {data} = await supabase.from('scores')
+      .select('username,tries,won')
+      .eq('date',dateStr)
+      .order('tries',{ascending:true})
+      .order('created_at',{ascending:true});
+    if(!data || data.length===0) {
+      return {title:`Tradle Leaderboard — ${dateStr}`, description:'No scores yet today!', color:0x3B6D11};
     }
-    const medals = ['🥇', '🥈', '🥉'];
-    let desc = `Today's word: **${word}**\n\n`;
-    data.forEach((row, i) => {
-      const medal = medals[i] || `${i + 1}.`;
+    const medals = ['🥇','🥈','🥉'];
+    let desc = '';
+    data.forEach((row,i) => {
+      const medal = medals[i] || `${i+1}.`;
       desc += `${medal} **${row.username}** — ${row.won ? `${row.tries}/6` : 'X/6'}\n`;
     });
-    const solvers = data.filter(r => r.won).length;
+    const solvers = data.filter(r=>r.won).length;
     desc += `\n${solvers}/${data.length} solved today`;
-    return { title: `🟩 Tradle Leaderboard — ${dateStr}`, description: desc, color: 0x3B6D11, footer: { text: 'Resets at midnight UK time' } };
-  } catch (e) {
-    return { title: 'Leaderboard error', description: e.message, color: 0x3B6D11 };
+    if(showWord) desc += `\n\nWord was: **${getDailyWord(dateStr)}**`;
+    return {
+      title: `🟩 Tradle Leaderboard — ${dateStr}`,
+      description: desc,
+      color: 0x3B6D11,
+      footer:{text: showWord ? 'New word drops at midnight!' : 'Resets at midnight UK time'}
+    };
+  } catch(e) {
+    return {title:'Leaderboard error', description:e.message, color:0x3B6D11};
   }
 }
 
 discordClient.once('clientReady', async () => {
   console.log(`Tradle bot online as ${discordClient.user.tag}`);
   await registerCommands();
+  startMidnightScheduler();
 });
 
 discordClient.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+  if(!interaction.isChatInputCommand()) return;
   const gameUrl = process.env.GAME_URL || 'https://tradle-v2-production.up.railway.app';
 
-  if (interaction.commandName === 'tradle') {
-    await interaction.reply({
-      embeds: [{ title: '🟩 Tradle — Trading & TnB Wordle', description: `Guess the 5-letter trading word in 6 tries.\n\n**[▶ Play now](${gameUrl})**`, color: 0x3B6D11, footer: { text: '🟩 correct  🟨 wrong spot  ⬛ not in word' } }]
-    });
+  if(interaction.commandName === 'tradle') {
+    await interaction.reply({embeds:[{
+      title:'🟩 Tradle — Trading & TnB Wordle',
+      description:`Guess the 5-letter trading word in 6 tries.\n\n**[▶ Play now](${gameUrl})**`,
+      color:0x3B6D11,
+      footer:{text:'🟩 correct  🟨 wrong spot  ⬛ not in word'}
+    }]});
   }
-  if (interaction.commandName === 'tradle-leaderboard') {
+  if(interaction.commandName === 'tradle-leaderboard') {
     await interaction.deferReply();
-    const embed = await getLeaderboardEmbed();
-    await interaction.editReply({ embeds: [embed] });
+    const embed = await getLeaderboardEmbed(getUKDate(), false);
+    await interaction.editReply({embeds:[embed]});
   }
-  if (interaction.commandName === 'tradle-help') {
+  if(interaction.commandName === 'tradle-help') {
     await interaction.reply({
-      ephemeral: true,
-      embeds: [{ title: 'How to play Tradle', description: `Guess the **5-letter** word in **6 tries**.\n\n🟩 Right letter, right spot\n🟨 Right letter, wrong spot\n⬛ Not in the word\n\nLog in with Discord once — remembered forever after.\n\n**[Play here](${gameUrl})**`, color: 0x3B6D11 }]
+      ephemeral:true,
+      embeds:[{
+        title:'How to play Tradle',
+        description:`Guess the **5-letter** word in **6 tries**.\n\n🟩 Right letter, right spot\n🟨 Right letter, wrong spot\n⬛ Not in the word\n\n**[Play here](${gameUrl})**`,
+        color:0x3B6D11
+      }]
     });
   }
 });
 
-// Auto post leaderboard at 23:58 UK time
-cron.schedule('58 23 * * *', async () => {
-  const channelId = process.env.LEADERBOARD_CHANNEL_ID;
-  if (!channelId) return;
-  try {
-    const channel = await discordClient.channels.fetch(channelId);
-    const embed = await getLeaderboardEmbed();
-    embed.title = '🏆 Final Tradle Leaderboard — ' + new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London' });
-    embed.footer = { text: 'New word drops at midnight!' };
-    await channel.send({ embeds: [embed] });
-  } catch (e) { console.error('Leaderboard post error:', e.message); }
-}, { timezone: 'Europe/London' });
+function startMidnightScheduler() {
+  let lastFired = '';
+  setInterval(async () => {
+    const now = new Date();
+    const ukTime = new Date(now.toLocaleString('en-US',{timeZone:'Europe/London'}));
+    const hour = ukTime.getHours();
+    const min = ukTime.getMinutes();
+    const todayKey = ukTime.toDateString();
 
-// ─── Start ───────────────────────────────────────────────────────
+    if(hour === 23 && min === 59 && lastFired !== todayKey) {
+      lastFired = todayKey;
+      const channelId = process.env.LEADERBOARD_CHANNEL_ID;
+      if(!channelId) { console.log('No LEADERBOARD_CHANNEL_ID set'); return; }
+      try {
+        const channel = await discordClient.channels.fetch(channelId);
+        const dateStr = getUKDate();
+        const embed = await getLeaderboardEmbed(dateStr, true);
+        embed.title = `🏆 Final Tradle Leaderboard — ${dateStr}`;
+        await channel.send({embeds:[embed]});
+        console.log('Leaderboard auto-posted');
+      } catch(e) { console.error('Leaderboard post error:',e.message); }
+    }
+  }, 30000);
+  console.log('Midnight scheduler started');
+}
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
 
-if (process.env.DISCORD_TOKEN) {
-  discordClient.login(process.env.DISCORD_TOKEN).catch(e => console.error('Discord login error:', e.message));
-} else {
-  console.error('No DISCORD_TOKEN set');
-}
+if(process.env.DISCORD_TOKEN) {
+  discordClient.login(process.env.DISCORD_TOKEN).catch(e => console.error('Discord login error:',e.message));
+} else { console.error('No DISCORD_TOKEN set'); }
