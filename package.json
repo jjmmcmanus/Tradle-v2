@@ -1,17 +1,13 @@
 {
   "name": "tradle-v2",
   "version": "2.0.0",
-  "description": "Tradle — Trading & TnB Wordle with Discord auth and leaderboard",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "scripts": {"start": "node server.js"},
   "dependencies": {
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
-    "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "@supabase/supabase-js": "^2.39.0"
   }
