@@ -60,7 +60,7 @@ app.get('/auth/callback', async (req, res) => {
     if(!tokenData.access_token) return res.redirect('/');
     const userRes = await fetch('https://discord.com/api/users/@me',{headers:{Authorization:`Bearer ${tokenData.access_token}`}});
     const user = await userRes.json();
-    req.session.user = {id:user.id,username:user.username,avatar:user.avatar};
+    req.session.user = {id:user.id,username:user.global_name||user.username,avatar:user.avatar};
     res.redirect('/');
   } catch(e) { res.redirect('/'); }
 });
